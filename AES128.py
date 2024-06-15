@@ -63,25 +63,25 @@ def inv_sub_bytes(state):
             state[i][j] = inv_s_box[state[i][j]]
 
 def shift_rows(state):
-    state[1][0], state[1][1], state[1][2], state[1][3] = state[1][1], state[1][2], state[1][3], state[1][0]
-    state[2][0], state[2][1], state[2][2], state[2][3] = state[2][2], state[2][3], state[2][0], state[2][1]
-    state[3][0], state[3][1], state[3][2], state[3][3] = state[3][3], state[3][0], state[3][1], state[3][2]
+    state[1] = state[1][1:] + state[1][:1]
+    state[2] = state[2][2:] + state[2][:2]
+    state[3] = state[3][3:] + state[3][:3]
 
 def inv_shift_rows(state):
-    state[1][0], state[1][1], state[1][2], state[1][3] = state[1][3], state[1][0], state[1][1], state[1][2]
-    state[2][0], state[2][1], state[2][2], state[2][3] = state[2][2], state[2][3], state[2][0], state[2][1]
-    state[3][0], state[3][1], state[3][2], state[3][3] = state[3][1], state[3][2], state[3][3], state[3][0]
+    state[1] = state[1][-1:] + state[1][:-1]
+    state[2] = state[2][-2:] + state[2][:-2]
+    state[3] = state[3][-3:] + state[3][:-3]
 
 def xtime(a):
     return (((a << 1) ^ 0x1B) & 0xFF) if (a & 0x80) else (a << 1)
 
 def mix_single_column(a):
     t = a[0] ^ a[1] ^ a[2] ^ a[3]
-    u = a[0]
+    a0 = a[0]
     a[0] ^= t ^ xtime(a[0] ^ a[1])
     a[1] ^= t ^ xtime(a[1] ^ a[2])
     a[2] ^= t ^ xtime(a[2] ^ a[3])
-    a[3] ^= t ^ xtime(a[3] ^ u)
+    a[3] ^= t ^ xtime(a[3] ^ a0)
 
 def mix_columns(s):
     for i in range(4):
@@ -107,14 +107,13 @@ def key_expansion(key):
     key_symbols = [ord(symbol) for symbol in key]
 
     if len(key_symbols) < 4 * Nk:
-        for i in range(4 * Nk - len(key_symbols)):
-            key_symbols.append(0x01)
+        key_symbols.extend([0x01] * (4 * Nk - len(key_symbols)))
 
     key_schedule = []
     for r in range(Nk):
-        key_schedule.append(key_symbols[4 * r] << 24 |
-                            key_symbols[4 * r + 1] << 16 |
-                            key_symbols[4 * r + 2] << 8 |
+        key_schedule.append((key_symbols[4 * r] << 24) |
+                            (key_symbols[4 * r + 1] << 16) |
+                            (key_symbols[4 * r + 2] << 8) |
                             key_symbols[4 * r + 3])
 
     for r in range(Nk, Nb * (Nr + 1)):
@@ -123,16 +122,13 @@ def key_expansion(key):
             temp = ((s_box[(temp >> 16) & 0xFF] << 24) |
                     (s_box[(temp >> 8) & 0xFF] << 16) |
                     (s_box[temp & 0xFF] << 8) |
-                    (s_box[(temp >> 24) & 0xFF]))
+                    s_box[(temp >> 24) & 0xFF])
             temp ^= Rcon[(r // Nk) - 1]
         key_schedule.append(key_schedule[r - Nk] ^ temp)
     return key_schedule
 
 def encrypt_block(block, key_schedule):
-    state = [[0] * 4 for i in range(4)]
-    for r in range(4):
-        for c in range(Nb):
-            state[r][c] = (block[r * Nb + c] & 0xFF)
+    state = [[(block[r * Nb + c] & 0xFF) for c in range(Nb)] for r in range(4)]
 
     add_round_key(state, key_schedule[0:Nb])
 
@@ -146,17 +142,11 @@ def encrypt_block(block, key_schedule):
     shift_rows(state)
     add_round_key(state, key_schedule[Nr * Nb:(Nr + 1) * Nb])
 
-    out_block = [0] * 16
-    for r in range(4):
-        for c in range(4):
-            out_block[r * Nb + c] = state[r][c]
+    out_block = [state[r][c] for r in range(4) for c in range(Nb)]
     return out_block
 
 def decrypt_block(block, key_schedule):
-    state = [[0] * 4 for i in range(4)]
-    for r in range(4):
-        for c in range(Nb):
-            state[r][c] = (block[r * Nb + c] & 0xFF)
+    state = [[(block[r * Nb + c] & 0xFF) for c in range(Nb)] for r in range(4)]
 
     add_round_key(state, key_schedule[Nr * Nb:(Nr + 1) * Nb])
 
@@ -170,28 +160,21 @@ def decrypt_block(block, key_schedule):
     inv_sub_bytes(state)
     add_round_key(state, key_schedule[0:Nb])
 
-    out_block = [0] * 16
-    for r in range(4):
-        for c in range(4):
-            out_block[r * Nb + c] = state[r][c]
+    out_block = [state[r][c] for r in range(4) for c in range(Nb)]
     return out_block
 
-# AES encryption
-key = 'SEMOGAHOKILAHYAA'
-message = 'ENKRIPSIAES ASIK'
+if __name__ == "__main__":
+    key = 'SEMOGAHOKILAHYAA'
+    message = 'ENKRIPSIAES ASIK'
 
-# Key Expansion
-key_schedule = key_expansion(key)
+    key_schedule = key_expansion(key)
 
-# Encrypt the block
-encrypted_message = encrypt_block([ord(char) for char in message], key_schedule)
+    encrypted_message = encrypt_block([ord(char) for char in message], key_schedule)
 
-# Decrypt the block
-decrypted_message = decrypt_block(encrypted_message, key_schedule)
-decrypted_message_text = ''.join([chr(byte) for byte in decrypted_message])
+    decrypted_message = decrypt_block(encrypted_message, key_schedule)
+    decrypted_message_text = ''.join([chr(byte) for byte in decrypted_message])
 
-# Print outputs
-print("Key:", key)
-print("Plaintext:", message)
-print("Ciphertext:", ''.join([f'{byte:02x}' for byte in encrypted_message]))  # Print as hexadecimal
-print("Decryption Result:", decrypted_message_text)
+    print("Key:", key)
+    print("Plaintext:", message)
+    print("Ciphertext:", ''.join([f'{byte:02x}' for byte in encrypted_message]))
+    print("Decryption Result:", decrypted_message_text)

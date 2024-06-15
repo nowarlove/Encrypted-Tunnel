@@ -50,20 +50,20 @@ class FileClientApp:
     def encrypt_file(self, filepath):
         with open(filepath, "rb") as file:
             file_data = file.read()
-        encrypted_data = []
+        encrypted_data = bytearray()
         for i in range(0, len(file_data), 16):
             block = file_data[i:i+16]
             if len(block) < 16:
                 block = block.ljust(16, b'\0')
             encrypted_data.extend(encrypt_block(list(block), self.key_schedule))
-        return bytes(encrypted_data)
+        return encrypted_data
 
     def decrypt_file(self, encrypted_data):
-        decrypted_data = []
+        decrypted_data = bytearray()
         for i in range(0, len(encrypted_data), 16):
             block = encrypted_data[i:i+16]
             decrypted_data.extend(decrypt_block(list(block), self.key_schedule))
-        return bytes(decrypted_data).rstrip(b'\0')
+        return decrypted_data.rstrip(b'\0')
 
     def upload_file(self):
         filepath = filedialog.askopenfilename()
@@ -71,15 +71,13 @@ class FileClientApp:
             filename = os.path.basename(filepath)
             try:
                 encrypted_data = self.encrypt_file(filepath)
-                with open(filepath, "wb") as file:
+                with open(filepath + ".enc", "wb") as file:
                     file.write(encrypted_data)
-                with open(filepath, "rb") as file:
+                with open(filepath + ".enc", "rb") as file:
                     self.ftp.storbinary(f"STOR {filename}", file)
+                os.remove(filepath + ".enc")
                 messagebox.showinfo("Upload Success", f"File {filename} uploaded successfully")
                 self.list_files()
-                # Restore original file
-                with open(filepath, "wb") as file:
-                    file.write(self.decrypt_file(encrypted_data))
             except Exception as e:
                 messagebox.showerror("Upload Error", f"Error uploading file {filepath}: {e}")
 
@@ -89,13 +87,14 @@ class FileClientApp:
             save_path = filedialog.asksaveasfilename(initialfile=selected_file)
             if save_path:
                 try:
-                    with open(save_path, "wb") as file:
+                    with open(save_path + ".enc", "wb") as file:
                         self.ftp.retrbinary(f"RETR {selected_file}", file.write)
-                    with open(save_path, "rb") as file:
+                    with open(save_path + ".enc", "rb") as file:
                         encrypted_data = file.read()
                     decrypted_data = self.decrypt_file(encrypted_data)
                     with open(save_path, "wb") as file:
                         file.write(decrypted_data)
+                    os.remove(save_path + ".enc")
                     messagebox.showinfo("Download Success", f"File {selected_file} downloaded successfully")
                 except Exception as e:
                     messagebox.showerror("Download Error", f"Error downloading file {selected_file}: {e}")

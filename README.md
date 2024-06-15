@@ -12,7 +12,7 @@ This project consists of an FTP server and client implemented in Python. The cli
 
 1. Clone the repository:
    ```sh
-   git clone [https://github.com/your-repository.git](https://github.com/putrisr22/Encrypted-Tunnel)
+   git clone https://github.com/your-repository.git
    cd your-repository
    ```
 
