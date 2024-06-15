@@ -1,155 +1,197 @@
-import numpy as np
+import logging
+from argparse import ArgumentParser
+from enum import Enum
+from typing import List
 
-# S-box
-sBoxTable = [
-    ["63", "7C", "77", "7B", "F2", "6B", "6F", "C5", "30", "01", "67", "2B", "FE", "D7", "AB", "76"],
-    ["CA", "82", "C9", "7D", "FA", "59", "47", "F0", "AD", "D4", "A2", "AF", "9C", "A4", "72", "C0"],
-    ["B7", "FD", "93", "26", "36", "3F", "F7", "CC", "34", "A5", "E5", "F1", "71", "D8", "31", "15"],
-    ["04", "C7", "23", "C3", "18", "96", "05", "9A", "07", "12", "80", "E2", "EB", "27", "B2", "75"],
-    ["09", "83", "2C", "1A", "1B", "6E", "5A", "A0", "52", "3B", "D6", "B3", "29", "E3", "2F", "84"],
-    ["53", "D1", "00", "ED", "20", "FC", "B1", "5B", "6A", "CB", "BE", "39", "4A", "4C", "58", "CF"],
-    ["D0", "EF", "AA", "FB", "43", "4D", "33", "85", "45", "F9", "02", "7F", "50", "3C", "9F", "A8"],
-    ["51", "A3", "40", "8F", "92", "9D", "38", "F5", "BC", "B6", "DA", "21", "10", "FF", "F3", "D2"],
-    ["CD", "0C", "13", "EC", "5F", "97", "44", "17", "C4", "A7", "7E", "3D", "64", "5D", "19", "73"],
-    ["60", "81", "4F", "DC", "22", "2A", "90", "88", "46", "EE", "B8", "14", "DE", "5E", "0B", "DB"],
-    ["E0", "32", "3A", "0A", "49", "06", "24", "5C", "C2", "D3", "AC", "62", "91", "95", "E4", "79"],
-    ["E7", "C8", "37", "6D", "8D", "D5", "4E", "A9", "6C", "56", "F4", "EA", "65", "7A", "AE", "08"],
-    ["BA", "78", "25", "2E", "1C", "A6", "B4", "C6", "E8", "DD", "74", "1F", "4B", "BD", "8B", "8A"],
-    ["70", "3E", "B5", "66", "48", "03", "F6", "0E", "61", "35", "57", "B9", "86", "C1", "1D", "9E"],
-    ["E1", "F8", "98", "11", "69", "D9", "8E", "94", "9B", "1E", "87", "E9", "CE", "55", "28", "DF"],
-    ["8C", "A1", "89", "0D", "BF", "E6", "42", "68", "41", "99", "2D", "0F", "B0", "54", "BB", "16"]
-]
+# Constants
+s_box = (
+    0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
+    0xCA, 0x82, 0xC9, 0x7D, 0xFA, 0x59, 0x47, 0xF0, 0xAD, 0xD4, 0xA2, 0xAF, 0x9C, 0xA4, 0x72, 0xC0,
+    0xB7, 0xFD, 0x93, 0x26, 0x36, 0x3F, 0xF7, 0xCC, 0x34, 0xA5, 0xE5, 0xF1, 0x71, 0xD8, 0x31, 0x15,
+    0x04, 0xC7, 0x23, 0xC3, 0x18, 0x96, 0x05, 0x9A, 0x07, 0x12, 0x80, 0xE2, 0xEB, 0x27, 0xB2, 0x75,
+    0x09, 0x83, 0x2C, 0x1A, 0x1B, 0x6E, 0x5A, 0xA0, 0x52, 0x3B, 0xD6, 0xB3, 0x29, 0xE3, 0x2F, 0x84,
+    0x53, 0xD1, 0x00, 0xED, 0x20, 0xFC, 0xB1, 0x5B, 0x6A, 0xCB, 0xBE, 0x39, 0x4A, 0x4C, 0x58, 0xCF,
+    0xD0, 0xEF, 0xAA, 0xFB, 0x43, 0x4D, 0x33, 0x85, 0x45, 0xF9, 0x02, 0x7F, 0x50, 0x3C, 0x9F, 0xA8,
+    0x51, 0xA3, 0x40, 0x8F, 0x92, 0x9D, 0x38, 0xF5, 0xBC, 0xB6, 0xDA, 0x21, 0x10, 0xFF, 0xF3, 0xD2,
+    0xCD, 0x0C, 0x13, 0xEC, 0x5F, 0x97, 0x44, 0x17, 0xC4, 0xA7, 0x7E, 0x3D, 0x64, 0x5D, 0x19, 0x73,
+    0x60, 0x81, 0x4F, 0xDC, 0x22, 0x2A, 0x90, 0x88, 0x46, 0xEE, 0xB8, 0x14, 0xDE, 0x5E, 0x0B, 0xDB,
+    0xE0, 0x32, 0x3A, 0x0A, 0x49, 0x06, 0x24, 0x5C, 0xC2, 0xD3, 0xAC, 0x62, 0x91, 0x95, 0xE4, 0x79,
+    0xE7, 0xC8, 0x37, 0x6D, 0x8D, 0xD5, 0x4E, 0xA9, 0x6C, 0x56, 0xF4, 0xEA, 0x65, 0x7A, 0xAE, 0x08,
+    0xBA, 0x78, 0x25, 0x2E, 0x1C, 0xA6, 0xB4, 0xC6, 0xE8, 0xDD, 0x74, 0x1F, 0x4B, 0xBD, 0x8B, 0x8A,
+    0x70, 0x3E, 0xB5, 0x66, 0x48, 0x03, 0xF6, 0x0E, 0x61, 0x35, 0x57, 0xB9, 0x86, 0xC1, 0x1D, 0x9E,
+    0xE1, 0xF8, 0x98, 0x11, 0x69, 0xD9, 0x8E, 0x94, 0x9B, 0x1E, 0x87, 0xE9, 0xCE, 0x55, 0x28, 0xDF,
+    0x8C, 0xA1, 0x89, 0x0D, 0xBF, 0xE6, 0x42, 0x68, 0x41, 0x99, 0x2D, 0x0F, 0xB0, 0x54, 0xBB, 0x16
+)
 
-# Inverse S-Box
-inverseSboxTable = [
-    ["52", "09", "6A", "D5", "30", "36", "A5", "38", "BF", "40", "A3", "9E", "81", "F3", "D7", "FB"],
-    ["7C", "E3", "39", "82", "9B", "2F", "FF", "87", "34", "8E", "43", "44", "C4", "DE", "E9", "CB"],
-    ["54", "7B", "94", "32", "A6", "C2", "23", "3D", "EE", "4C", "95", "0B", "42", "FA", "C3", "4E"],
-    ["08", "2E", "A1", "66", "28", "D9", "24", "B2", "76", "5B", "A2", "49", "6D", "8B", "D1", "25"],
-    ["72", "F8", "F6", "64", "86", "68", "98", "16", "D4", "A4", "5C", "CC", "5D", "65", "B6", "92"],
-    ["6C", "70", "48", "50", "FD", "ED", "B9", "DA", "5E", "15", "46", "57", "A7", "8D", "9D", "84"],
-    ["90", "D8", "AB", "00", "8C", "BC", "D3", "0A", "F7", "E4", "58", "05", "B8", "B3", "45", "06"],
-    ["D0", "2C", "1E", "8F", "CA", "3F", "0F", "02", "C1", "AF", "BD", "03", "01", "13", "8A", "6B"],
-    ["3A", "91", "11", "41", "4F", "67", "DC", "EA", "97", "F2", "CF", "CE", "F0", "B4", "E6", "73"],
-    ["96", "AC", "74", "22", "E7", "AD", "35", "85", "E2", "F9", "37", "E8", "1C", "75", "DF", "6E"],
-    ["47", "F1", "1A", "71", "1D", "29", "C5", "89", "6F", "B7", "62", "0E", "AA", "18", "BE", "1B"],
-    ["FC", "56", "3E", "4B", "C6", "D2", "79", "20", "9A", "DB", "C0", "FE", "78", "CD", "5A", "F4"],
-    ["1F", "DD", "A8", "33", "88", "07", "C7", "31", "B1", "12", "10", "59", "27", "80", "EC", "5F"],
-    ["60", "51", "7F", "A9", "19", "B5", "4A", "0D", "2D", "E5", "7A", "9F", "93", "C9", "9C", "EF"],
-    ["A0", "E0", "3B", "4D", "AE", "2A", "F5", "B0", "C8", "EB", "BB", "3C", "83", "53", "99", "61"],
-    ["17", "2B", "04", "7E", "BA", "77", "D6", "26", "E1", "69", "14", "63", "55", "21", "0C", "7D"]
-]
+inv_s_box = (
+    0x52, 0x09, 0x6A, 0xD5, 0x30, 0x36, 0xA5, 0x38, 0xBF, 0x40, 0xA3, 0x9E, 0x81, 0xF3, 0xD7, 0xFB,
+    0x7C, 0xE3, 0x39, 0x82, 0x9B, 0x2F, 0xFF, 0x87, 0x34, 0x8E, 0x43, 0x44, 0xC4, 0xDE, 0xE9, 0xCB,
+    0x54, 0x7B, 0x94, 0x32, 0xA6, 0xC2, 0x23, 0x3D, 0xEE, 0x4C, 0x95, 0x0B, 0x42, 0xFA, 0xC3, 0x4E,
+    0x08, 0x2E, 0xA1, 0x66, 0x28, 0xD9, 0x24, 0xB2, 0x76, 0x5B, 0xA2, 0x49, 0x6D, 0x8B, 0xD1, 0x25,
+    0x72, 0xF8, 0xF6, 0x64, 0x86, 0x68, 0x98, 0x16, 0xD4, 0xA4, 0x5C, 0xCC, 0x5D, 0x65, 0xB6, 0x92,
+    0x6C, 0x70, 0x48, 0x50, 0xFD, 0xED, 0xB9, 0xDA, 0x5E, 0x15, 0x46, 0x57, 0xA7, 0x8D, 0x9D, 0x84,
+    0x90, 0xD8, 0xAB, 0x00, 0x8C, 0xBC, 0xD3, 0x0A, 0xF7, 0xE4, 0x58, 0x05, 0xB8, 0xB3, 0x45, 0x06,
+    0xD0, 0x2C, 0x1E, 0x8F, 0xCA, 0x3F, 0x0F, 0x02, 0xC1, 0xAF, 0xBD, 0x03, 0x01, 0x13, 0x8A, 0x6B,
+    0x3A, 0x91, 0x11, 0x41, 0x4F, 0x67, 0xDC, 0xEA, 0x97, 0xF2, 0xCF, 0xCE, 0xF0, 0xB4, 0xE6, 0x73,
+    0x96, 0xAC, 0x74, 0x22, 0xE7, 0xAD, 0x35, 0x85, 0xE2, 0xF9, 0x37, 0xE8, 0x1C, 0x75, 0xDF, 0x6E,
+    0x47, 0xF1, 0x1A, 0x71, 0x1D, 0x29, 0xC5, 0x89, 0x6F, 0xB7, 0x62, 0x0E, 0xAA, 0x18, 0xBE, 0x1B,
+    0xFC, 0x56, 0x3E, 0x4B, 0xC6, 0xD2, 0x79, 0x20, 0x9A, 0xDB, 0xC0, 0xFE, 0x78, 0xCD, 0x5A, 0xF4,
+    0x1F, 0xDD, 0xA8, 0x33, 0x88, 0x07, 0xC7, 0x31, 0xB1, 0x12, 0x10, 0x59, 0x27, 0x80, 0xEC, 0x5F,
+    0x60, 0x51, 0x7F, 0xA9, 0x19, 0xB5, 0x4A, 0x0D, 0x2D, 0xE5, 0x7A, 0x9F, 0x93, 0xC9, 0x9C, 0xEF,
+    0xA0, 0xE0, 0x3B, 0x4D, 0xAE, 0x2A, 0xF5, 0xB0, 0xC8, 0xEB, 0xBB, 0x3C, 0x83, 0x53, 0x99, 0x61,
+    0x17, 0x2B, 0x04, 0x7E, 0xBA, 0x77, 0xD6, 0x26, 0xE1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0C, 0x7D
+)
 
-Rcon = [
-    [0x01, 0x00, 0x00, 0x00],
-    [0x02, 0x00, 0x00, 0x00],
-    [0x04, 0x00, 0x00, 0x00],
-    [0x08, 0x00, 0x00, 0x00],
-    [0x10, 0x00, 0x00, 0x00],
-    [0x20, 0x00, 0x00, 0x00],
-    [0x40, 0x00, 0x00, 0x00],
-    [0x80, 0x00, 0x00, 0x00],
-    [0x1B, 0x00, 0x00, 0x00],
-    [0x36, 0x00, 0x00, 0x00]
-]
+Rcon = (
+    0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000,
+    0x20000000, 0x40000000, 0x80000000, 0x1B000000, 0x36000000
+)
 
-def rot_word(word):
-    return word[1:] + word[:1]
+Nb = 4
+Nk = 4
+Nr = 10
 
-def sub_word(word):
-    return [int(sBoxTable[b >> 4][b & 0x0F], 16) for b in word]
+# AES Functions
+def sub_bytes(state):
+    for i in range(4):
+        for j in range(4):
+            state[i][j] = s_box[state[i][j]]
 
-def xor_bytes(a, b):
-    return [i ^ j for i, j in zip(a, b)]
+def inv_sub_bytes(state):
+    for i in range(4):
+        for j in range(4):
+            state[i][j] = inv_s_box[state[i][j]]
+
+def shift_rows(state):
+    state[1][0], state[1][1], state[1][2], state[1][3] = state[1][1], state[1][2], state[1][3], state[1][0]
+    state[2][0], state[2][1], state[2][2], state[2][3] = state[2][2], state[2][3], state[2][0], state[2][1]
+    state[3][0], state[3][1], state[3][2], state[3][3] = state[3][3], state[3][0], state[3][1], state[3][2]
+
+def inv_shift_rows(state):
+    state[1][0], state[1][1], state[1][2], state[1][3] = state[1][3], state[1][0], state[1][1], state[1][2]
+    state[2][0], state[2][1], state[2][2], state[2][3] = state[2][2], state[2][3], state[2][0], state[2][1]
+    state[3][0], state[3][1], state[3][2], state[3][3] = state[3][1], state[3][2], state[3][3], state[3][0]
+
+def xtime(a):
+    return (((a << 1) ^ 0x1B) & 0xFF) if (a & 0x80) else (a << 1)
+
+def mix_single_column(a):
+    t = a[0] ^ a[1] ^ a[2] ^ a[3]
+    u = a[0]
+    a[0] ^= t ^ xtime(a[0] ^ a[1])
+    a[1] ^= t ^ xtime(a[1] ^ a[2])
+    a[2] ^= t ^ xtime(a[2] ^ a[3])
+    a[3] ^= t ^ xtime(a[3] ^ u)
+
+def mix_columns(s):
+    for i in range(4):
+        mix_single_column(s[i])
+
+def inv_mix_columns(s):
+    for i in range(4):
+        u = xtime(xtime(s[i][0] ^ s[i][2]))
+        v = xtime(xtime(s[i][1] ^ s[i][3]))
+        s[i][0] ^= u
+        s[i][1] ^= v
+        s[i][2] ^= u
+        s[i][3] ^= v
+
+    mix_columns(s)
+
+def add_round_key(state, round_key):
+    for i in range(4):
+        for j in range(4):
+            state[i][j] ^= (round_key[i] >> (8 * (3 - j))) & 0xFF
 
 def key_expansion(key):
     key_symbols = [ord(symbol) for symbol in key]
-    key_schedule = [key_symbols[i:i + 4] for i in range(0, len(key_symbols), 4)]
-    
-    for i in range(len(key_schedule), 4 * (10 + 1)):
-        temp = key_schedule[-1]
-        if i % 4 == 0:
-            temp = xor_bytes(sub_word(rot_word(temp)), Rcon[i // 4 - 1])
-        key_schedule.append(xor_bytes(key_schedule[-4], temp))
-    
+
+    if len(key_symbols) < 4 * Nk:
+        for i in range(4 * Nk - len(key_symbols)):
+            key_symbols.append(0x01)
+
+    key_schedule = []
+    for r in range(Nk):
+        key_schedule.append(key_symbols[4 * r] << 24 |
+                            key_symbols[4 * r + 1] << 16 |
+                            key_symbols[4 * r + 2] << 8 |
+                            key_symbols[4 * r + 3])
+
+    for r in range(Nk, Nb * (Nr + 1)):
+        temp = key_schedule[r - 1]
+        if r % Nk == 0:
+            temp = ((s_box[(temp >> 16) & 0xFF] << 24) |
+                    (s_box[(temp >> 8) & 0xFF] << 16) |
+                    (s_box[temp & 0xFF] << 8) |
+                    (s_box[(temp >> 24) & 0xFF]))
+            temp ^= Rcon[(r // Nk) - 1]
+        key_schedule.append(key_schedule[r - Nk] ^ temp)
     return key_schedule
 
-def sub_bytes(state):
-    return [
-        [
-            int(sBoxTable[byte >> 4][byte & 0x0F], 16)
-            for byte in row
-        ]
-        for row in state
-    ]
-
-def shift_rows(state):
-    return [state[0], state[1][1:] + state[1][:1], state[2][2:] + state[2][:2], state[3][3:] + state[3][:3]]
-
-def gf_mult(a, b):
-    p = 0
-    hi_bit_set = 0
-    for i in range(8):
-        if b & 1:
-            p ^= a
-        hi_bit_set = a & 0x80
-        a <<= 1
-        if hi_bit_set:
-            a ^= 0x1B
-        b >>= 1
-    return p % 256
-
-def mix_columns(state):
-    def mix_single_column(column):
-        return [
-            gf_mult(column[0], 2) ^ gf_mult(column[1], 3) ^ column[2] ^ column[3],
-            column[0] ^ gf_mult(column[1], 2) ^ gf_mult(column[2], 3) ^ column[3],
-            column[0] ^ column[1] ^ gf_mult(column[2], 2) ^ gf_mult(column[3], 3),
-            gf_mult(column[0], 3) ^ column[1] ^ column[2] ^ gf_mult(column[3], 2)
-        ]
-    
-    return [mix_single_column(col) for col in np.array(state).T.tolist()]
-
-def add_round_key(state, round_key):
-    return [[state[i][j] ^ round_key[i][j] for j in range(4)] for i in range(4)]
-
 def encrypt_block(block, key_schedule):
-    state = [list(block[i:i + 4]) for i in range(0, len(block), 4)]
-    
-    state = add_round_key(state, key_schedule[:4])
-    
-    for round in range(1, 10):
-        state = sub_bytes(state)
-        state = shift_rows(state)
-        state = mix_columns(state)
-        state = add_round_key(state, key_schedule[round * 4:(round + 1) * 4])
-    
-    state = sub_bytes(state)
-    state = shift_rows(state)
-    state = add_round_key(state, key_schedule[40:])
-    
-    return [state[i][j] for i in range(4) for j in range(4)]
+    state = [[0] * 4 for i in range(4)]
+    for r in range(4):
+        for c in range(Nb):
+            state[r][c] = (block[r * Nb + c] & 0xFF)
 
-def encrypt_aes(plaintext, key):
-    key_schedule = key_expansion(key)
-    
-    plaintext_bytes = [ord(c) for c in plaintext]
-    blocks = [plaintext_bytes[i:i + 16] for i in range(0, len(plaintext_bytes), 16)]
-    
-    ciphertext = []
-    for block in blocks:
-        if len(block) < 16:
-            block += [0] * (16 - len(block))
-        ciphertext.extend(encrypt_block(block, key_schedule))
-    
-    return ''.join(format(x, '02x') for x in ciphertext)
+    add_round_key(state, key_schedule[0:Nb])
 
-# Main function to test the encryption
-if __name__ == "__main__":
-    plaintext = "ENKRIPSIAES ASIK"
-    key = "SEMOGAHOKILAHYAA"
-    
-    ciphertext = encrypt_aes(plaintext, key)
-    print("Key:", key)
-    print("Plaintext:", plaintext)
-    print("Ciphertext:", ciphertext)
+    for rnd in range(1, Nr):
+        sub_bytes(state)
+        shift_rows(state)
+        mix_columns(state)
+        add_round_key(state, key_schedule[rnd * Nb:(rnd + 1) * Nb])
+
+    sub_bytes(state)
+    shift_rows(state)
+    add_round_key(state, key_schedule[Nr * Nb:(Nr + 1) * Nb])
+
+    out_block = [0] * 16
+    for r in range(4):
+        for c in range(4):
+            out_block[r * Nb + c] = state[r][c]
+    return out_block
+
+def decrypt_block(block, key_schedule):
+    state = [[0] * 4 for i in range(4)]
+    for r in range(4):
+        for c in range(Nb):
+            state[r][c] = (block[r * Nb + c] & 0xFF)
+
+    add_round_key(state, key_schedule[Nr * Nb:(Nr + 1) * Nb])
+
+    for rnd in range(Nr - 1, 0, -1):
+        inv_shift_rows(state)
+        inv_sub_bytes(state)
+        add_round_key(state, key_schedule[rnd * Nb:(rnd + 1) * Nb])
+        inv_mix_columns(state)
+
+    inv_shift_rows(state)
+    inv_sub_bytes(state)
+    add_round_key(state, key_schedule[0:Nb])
+
+    out_block = [0] * 16
+    for r in range(4):
+        for c in range(4):
+            out_block[r * Nb + c] = state[r][c]
+    return out_block
+
+# AES encryption
+key = 'SEMOGAHOKILAHYAA'
+message = 'ENKRIPSIAES ASIK'
+
+# Key Expansion
+key_schedule = key_expansion(key)
+
+# Encrypt the block
+encrypted_message = encrypt_block([ord(char) for char in message], key_schedule)
+
+# Decrypt the block
+decrypted_message = decrypt_block(encrypted_message, key_schedule)
+decrypted_message_text = ''.join([chr(byte) for byte in decrypted_message])
+
+# Print outputs
+print("Key:", key)
+print("Plaintext:", message)
+print("Ciphertext:", ''.join([f'{byte:02x}' for byte in encrypted_message]))  # Print as hexadecimal
+print("Decryption Result:", decrypted_message_text)
