@@ -1,6 +1,3 @@
-Berikut adalah dokumentasi untuk proyek Anda dalam bentuk `README.md`:
-
-```markdown
 # FTP File Client and Server with AES-128 Encryption
 
 ## Overview
@@ -15,7 +12,7 @@ This project consists of an FTP server and client implemented in Python. The cli
 
 1. Clone the repository:
    ```sh
-   git clone https://github.com/your-repository.git
+   git clone [https://github.com/your-repository.git](https://github.com/putrisr22/Encrypted-Tunnel)
    cd your-repository
    ```
 
@@ -28,12 +25,7 @@ This project consists of an FTP server and client implemented in Python. The cli
 
 ### Running the Server
 
-1. Create a directory for server data:
-   ```sh
-   mkdir server_data
-   ```
-
-2. Run the FTP server:
+1. Run the FTP server:
    ```sh
    python server.py
    ```
@@ -99,17 +91,10 @@ The encryption and decryption are handled using `aes128.py`. The AES-128 impleme
 - Check the server logs for any errors related to file permissions or user authentication.
 - Verify the encryption key and make sure it matches between the client and the server.
 
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
-
 ## Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request on GitHub.
 
 ## Contact
 
-For any questions or issues, please contact [your-email@example.com](mailto:your-email@example.com).
-```
-
-Silakan gunakan dan modifikasi dokumen ini sesuai kebutuhan Anda. Jika ada hal lain yang ingin ditambahkan atau diubah, beri tahu saya!
+For any questions or issues, please contact [symbian071@gmail.com](mailto:symbian071@gmail.com).
