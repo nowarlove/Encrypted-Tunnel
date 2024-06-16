@@ -3,19 +3,21 @@ import tkinter as tk
 from tkinter import filedialog, Listbox, END, SINGLE, messagebox
 import os
 from AES128 import encrypt_block, decrypt_block, key_expansion
+from ftplib import FTP_TLS
 
-FTP_HOST = "localhost"
-FTP_PORT = 21
+FTP_HOST = "192.168.159.130"
+FTP_PORT = 2121
 FTP_USER = "user"
 FTP_PASS = "12345"
 AES_KEY = 'SEMOGAHOKILAHYAA'
 
 class FileClientApp:
     def __init__(self, root):
-        self.ftp = ftplib.FTP()
+        self.ftp = FTP_TLS()
         try:
             self.ftp.connect(FTP_HOST, FTP_PORT)
             self.ftp.login(FTP_USER, FTP_PASS)
+            self.ftp.prot_p()  # Switch to secure data connection
         except Exception as e:
             messagebox.showerror("Connection Error", f"Error connecting to server: {e}")
             return
