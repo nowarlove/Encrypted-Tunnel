@@ -1,100 +1,98 @@
-# FTP File Client and Server with AES-128 Encryption
+# Secure FTP Server and Client
 
-## Overview
-This project consists of an FTP server and client implemented in Python. The client can upload, download, and delete files on the server, with the added security feature of AES-128 encryption for file transfers. The server provides a graphical user interface (GUI) for monitoring and controlling the server.
+A secure FTP server and client application using FTPS (FTP over TLS) with file encryption using AES-128.
 
 ## Features
-- **FTP Server**: Uses `pyftpdlib` to provide an FTP server with user authentication and file permissions.
-- **FTP Client**: Uses `ftplib` to connect to the FTP server and perform file operations.
-- **AES-128 Encryption**: Implements AES-128 encryption for secure file transfers.
 
-## Installation
+- **FTP over TLS (FTPS)**: Secure file transfer using encrypted connections.
+- **AES-128 Encryption**: Files are encrypted before uploading and decrypted after downloading.
+- **Graphical User Interface**: Both the client and server have a GUI for ease of use.
 
-1. Clone the repository:
-   ```sh
-   git clone https://github.com/your-repository.git
-   cd your-repository
-   ```
+## Requirements
 
-2. Install the required dependencies:
-   ```sh
-   pip install numpy pyftpdlib
-   ```
+- Python 3.x
+- Required Python packages:
+  - pyftpdlib
+  - tkinter
+
+## Getting Started
+
+### Server Setup
+
+1. **Install Required Packages**:
+    ```bash
+    pip install pyftpdlib
+    ```
+
+2. **Generate TLS Certificates**:
+    Generate a self-signed certificate and private key:
+    ```bash
+    openssl req -new -x509 -days 365 -nodes -out cert/cert.pem -keyout cert/key.pem
+    ```
+
+3. **Run the Server**:
+    Save the server script as `server.py` and run:
+    ```bash
+    python server.py
+    ```
+
+### Client Setup
+
+1. **Install Required Packages**:
+    ```bash
+    pip install tkinter
+    ```
+
+2. **Run the Client**:
+    Save the client script as `client.py` and run:
+    ```bash
+    python client.py
+    ```
+
+## File Structure
+
+- `server.py`: The FTP server script.
+- `client.py`: The FTP client script.
+- `AES128.py`: A module containing the AES-128 encryption and decryption functions.
+- `cert/`: Directory containing the TLS certificate and key.
+- `server_data/`: Directory where server files are stored.
 
 ## Usage
 
-### Running the Server
+### Server
 
-1. Run the FTP server:
-   ```sh
-   python server.py
-   ```
+- The server starts automatically and listens for connections on port 2121.
+- Server logs are displayed in the GUI.
 
-### Running the Client
+### Client
 
-1. Run the FTP client:
-   ```sh
-   python client.py
-   ```
-
-### AES-128 Encryption
-
-The encryption and decryption are handled using `aes128.py`. The AES-128 implementation is custom-built and integrated into the client for securing file transfers.
+- The client connects to the server and provides options to upload, download, and delete files.
+- Files are encrypted before upload and decrypted after download using AES-128 encryption.
 
 ## Code Explanation
 
-### server.py
+### Server (`server.py`)
 
-- **Dependencies**: `pyftpdlib`, `tkinter`, `threading`, `logging`
-- **Functionality**:
-  - Sets up an FTP server with user authentication and permissions.
-  - Provides a GUI for monitoring server logs and controlling the server.
+The server uses `pyftpdlib` to handle FTP connections securely using TLS. It provides a GUI using `tkinter` to display logs and control the server.
 
-### client.py
+#### Key Functions:
+- `start_ftp_server()`: Starts the FTP server.
+- `quit_server()`: Shuts down the server and exits the application.
 
-- **Dependencies**: `ftplib`, `tkinter`, `os`, `aes128.py`
-- **Functionality**:
-  - Connects to the FTP server and provides options to upload, download, and delete files.
-  - Uses AES-128 encryption for secure file transfers.
+### Client (`client.py`)
 
-### aes128.py
+The client connects to the FTP server using FTPS and provides functionalities to upload, download, and delete files. It uses AES-128 for encrypting files before upload and decrypting them after download.
 
-- **Dependencies**: `numpy`
-- **Functionality**:
-  - Implements AES-128 encryption and decryption functions.
-  - Provides methods for key expansion, block encryption, and block decryption.
+#### Key Functions:
+- `encrypt_file(filepath)`: Encrypts the file at the given path using AES-128.
+- `decrypt_file(encrypted_data)`: Decrypts the given data using AES-128.
+- `upload_file()`: Encrypts and uploads the selected file to the server.
+- `download_file()`: Downloads and decrypts the selected file from the server.
+- `delete_file()`: Deletes the selected file from the server.
+- `list_files()`: Lists all files on the server.
+- `logout()`: Logs out from the server and exits the application.
 
-## Example
+## Acknowledgements
 
-### Encrypting and Uploading a File
-
-1. Select a file to upload.
-2. The file is encrypted using AES-128 before being sent to the server.
-3. The encrypted file is uploaded to the server.
-
-### Downloading and Decrypting a File
-
-1. Select a file to download from the server.
-2. The encrypted file is downloaded from the server.
-3. The file is decrypted using AES-128 after being saved locally.
-
-## Dependencies
-
-- `numpy`: 1.26.4
-- `pip`: 24.0
-- `pyftpdlib`: 1.5.9
-- `setuptools`: 65.5.0
-
-## Troubleshooting
-
-- Ensure that the FTP server is running before starting the client.
-- Check the server logs for any errors related to file permissions or user authentication.
-- Verify the encryption key and make sure it matches between the client and the server.
-
-## Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request on GitHub.
-
-## Contact
-
-For any questions or issues, please contact [symbian071@gmail.com](mailto:symbian071@gmail.com).
+- [pyftpdlib](https://github.com/giampaolo/pyftpdlib) - A very complete and easy-to-use FTP server library.
+- [tkinter](https://docs.python.org/3/library/tkinter.html) - The standard Python interface to the Tk GUI toolkit.
