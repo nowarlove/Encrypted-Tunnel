@@ -1,5 +1,5 @@
 from pyftpdlib.authorizers import DummyAuthorizer
-from pyftpdlib.handlers import FTPHandler
+from pyftpdlib.handlers import TLS_FTPHandler
 from pyftpdlib.servers import FTPServer
 import os
 import threading
@@ -56,10 +56,16 @@ class FileServerApp:
         authorizer.add_user("user", "12345", SERVER_DATA_PATH, perm="elradfmw")
         authorizer.add_anonymous(SERVER_DATA_PATH, perm="elradfmw")
 
-        handler = FTPHandler
+        handler = TLS_FTPHandler
+        handler.certfile = "cert/cert.pem"
+        handler.keyfile = "cert/key.pem"
+        handler.tls_control_required = True
+        handler.tls_data_required = True
         handler.authorizer = authorizer
 
-        address = ("", 21)
+        handler.passive_ports = range(60000, 65535)  # Menetapkan kisaran port pasif
+
+        address = ("", 2121)
         self.ftp_server = FTPServer(address, handler)
         logging.info("[STARTING] FTP server is starting.")
         self.ftp_server.serve_forever()
