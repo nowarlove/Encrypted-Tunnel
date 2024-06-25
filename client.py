@@ -7,19 +7,18 @@ from ftplib import FTP_TLS
 
 FTP_HOST = "192.168.159.130"
 FTP_PORT = 2121
-FTP_USER = "user"
-FTP_PASS = "12345"
 AES_KEY = 'SEMOGAHOKILAHYAA'
 
 class FileClientApp:
-    def __init__(self, root):
+    def __init__(self, root, username, password):
         self.ftp = FTP_TLS()
         try:
             self.ftp.connect(FTP_HOST, FTP_PORT)
-            self.ftp.login(FTP_USER, FTP_PASS)
-            self.ftp.prot_p()  # Switch to secure data connection
+            self.ftp.login(username, password)
+            self.ftp.prot_p()
         except Exception as e:
             messagebox.showerror("Connection Error", f"Error connecting to server: {e}")
+            root.destroy()
             return
 
         self.root = root
@@ -73,11 +72,12 @@ class FileClientApp:
             filename = os.path.basename(filepath)
             try:
                 encrypted_data = self.encrypt_file(filepath)
-                with open(filepath + ".enc", "wb") as file:
+                enc_filepath = filepath + ".enc"
+                with open(enc_filepath, "wb") as file:
                     file.write(encrypted_data)
-                with open(filepath + ".enc", "rb") as file:
+                with open(enc_filepath, "rb") as file:
                     self.ftp.storbinary(f"STOR {filename}", file)
-                os.remove(filepath + ".enc")
+                os.remove(enc_filepath)
                 messagebox.showinfo("Upload Success", f"File {filename} uploaded successfully")
                 self.list_files()
             except Exception as e:
@@ -89,14 +89,15 @@ class FileClientApp:
             save_path = filedialog.asksaveasfilename(initialfile=selected_file)
             if save_path:
                 try:
-                    with open(save_path + ".enc", "wb") as file:
+                    enc_filepath = save_path + ".enc"
+                    with open(enc_filepath, "wb") as file:
                         self.ftp.retrbinary(f"RETR {selected_file}", file.write)
-                    with open(save_path + ".enc", "rb") as file:
+                    with open(enc_filepath, "rb") as file:
                         encrypted_data = file.read()
                     decrypted_data = self.decrypt_file(encrypted_data)
                     with open(save_path, "wb") as file:
                         file.write(decrypted_data)
-                    os.remove(save_path + ".enc")
+                    os.remove(enc_filepath)
                     messagebox.showinfo("Download Success", f"File {selected_file} downloaded successfully")
                 except Exception as e:
                     messagebox.showerror("Download Error", f"Error downloading file {selected_file}: {e}")
@@ -127,7 +128,35 @@ class FileClientApp:
             messagebox.showerror("Logout Error", f"Error logging out: {e}")
         self.root.destroy()
 
+class LoginWindow:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Login")
+        self.root.geometry("300x300")
+
+        tk.Label(root, text="Username").pack(pady=5)
+        self.username_entry = tk.Entry(root)
+        self.username_entry.pack(pady=5)
+
+        tk.Label(root, text="Password").pack(pady=5)
+        self.password_entry = tk.Entry(root, show='*')
+        self.password_entry.pack(pady=5)
+
+        tk.Button(root, text="Login", command=self.login).pack(pady=20)
+
+    def login(self):
+        username = self.username_entry.get()
+        password = self.password_entry.get()
+
+        if username and password:
+            self.root.destroy()
+            main_app = tk.Tk()
+            FileClientApp(main_app, username, password)
+            main_app.mainloop()
+        else:
+            messagebox.showerror("Login Error", "Please enter both username and password")
+
 if __name__ == "__main__":
     root = tk.Tk()
-    app = FileClientApp(root)
+    login_app = LoginWindow(root)
     root.mainloop()
